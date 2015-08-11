@@ -1,12 +1,13 @@
+from unittest import TextTestResult, TextTestRunner
+
 from django.test import TestCase
-from django.utils.unittest import TextTestResult, TextTestRunner
 
 try:
     from django.test.runner import DiscoverRunner as TestRunner
 except ImportError:
     from django.test.simple import DjangoTestSuiteRunner as TestRunner
 
-from .utils import object_list_to_table
+from .utils import object_list_to_table, equal_lists
 
 import re
 

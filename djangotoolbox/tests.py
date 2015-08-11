@@ -1,6 +1,8 @@
 from __future__ import with_statement
+
 from decimal import Decimal, InvalidOperation
 import time
+from unittest import expectedFailure, skip
 
 from django.core import serializers
 from django.db import models
@@ -9,7 +11,7 @@ from django.db.models.signals import post_save
 from django.db.utils import DatabaseError
 from django.dispatch.dispatcher import receiver
 from django.test import TestCase
-from django.utils.unittest import expectedFailure, skip
+from django.utils import six
 
 from .fields import ListField, SetField, DictField, EmbeddedModelField
 
@@ -233,7 +235,7 @@ class IterableFieldsTest(TestCase):
         dt = item.auto_now['a']
         self.assertNotEqual(dt, None)
         item.save()
-        time.sleep(0.5) # Sleep to avoid false positive failure on the assertion below
+        time.sleep(0.5)  # Sleep to avoid false positive failure on the assertion below
         self.assertGreater(DictModel.objects.get().auto_now['a'], dt)
         item.delete()
 
@@ -253,7 +255,7 @@ class IterableFieldsTest(TestCase):
     def test_list_with_foreignkeys(self):
 
         class ReferenceList(models.Model):
-            keys =  ListField(models.ForeignKey('Model'))
+            keys = ListField(models.ForeignKey('Model'))
 
         class Model(models.Model):
             pass
@@ -333,7 +335,7 @@ class EmbeddedModelFieldTest(TestCase):
         self.assertNotEqual(auto_now, None)
         self.assertNotEqual(auto_now_add, None)
 
-        sleep(1) # FIXME
+        sleep(1)  # FIXME
         instance.save()
         self.assertNotEqualDatetime(get_field(instance).auto_now,
                                     get_field(instance).auto_now_add)
@@ -394,7 +396,7 @@ class EmbeddedModelFieldTest(TestCase):
         EmbeddedModelFieldModel.objects.create(
             typed_list=[SetModel(setfield=range(3)),
                         SetModel(setfield=range(9))],
-            ordered_list=[Target(index=i) for i in xrange(5, 0, -1)])
+            ordered_list=[Target(index=i) for i in six.moves.range(5, 0, -1)])
         obj = EmbeddedModelFieldModel.objects.get()
         self.assertIn(5, obj.typed_list[1].setfield)
         self.assertEqual([target.index for target in obj.ordered_list],
@@ -721,8 +723,7 @@ class DecimalFieldTest(TestCase):
         d = DecimalModel.objects.get(decimal=Decimal('45.60'))
         self.assertEquals(str(d.decimal), '45.60')
 
-        # Filter argument should be converted to Decimal with 2 decimal
-        #_places.
+        # Filter argument should be converted to Decimal with 2 decimal places.
         d = DecimalModel.objects.get(decimal='0000345.67333333333333333')
         self.assertEquals(str(d.decimal), '345.67')
 
@@ -749,6 +750,7 @@ class DecimalFieldTest(TestCase):
 class DeleteModel(models.Model):
     key = models.IntegerField(primary_key=True)
     deletable = models.BooleanField()
+
 
 class BasicDeleteTest(TestCase):
 
@@ -777,10 +779,12 @@ class BasicDeleteTest(TestCase):
 class M2MDeleteChildModel(models.Model):
     key = models.IntegerField(primary_key=True)
 
+
 class M2MDeleteModel(models.Model):
     key = models.IntegerField(primary_key=True)
     deletable = models.BooleanField()
     children = models.ManyToManyField(M2MDeleteChildModel, blank=True)
+
 
 class ManyToManyDeleteTest(TestCase):
     """
@@ -815,6 +819,7 @@ class ManyToManyDeleteTest(TestCase):
 
 class QuerysetModel(models.Model):
     key = models.IntegerField(primary_key=True)
+
 
 class QuerysetTest(TestCase):
     """
