@@ -2,14 +2,16 @@ import datetime
 
 import django
 from django.conf import settings
+from django.db import connections
 from django.db.models.fields import NOT_PROVIDED
-from django.db.models.query import QuerySet
 from django.db.models.sql.compiler import SQLCompiler
 from django.db.models.sql.constants import MULTI, SINGLE
-from django.db.models.sql.where import AND, OR
 from django.db.utils import DatabaseError, IntegrityError
+
+from django.db.models.query import QuerySet
+from django.db.models.sql.where import AND, OR
 from django.utils.tree import Node
-from django.db import connections
+
 
 try:
     from django.db.models.sql.where import SubqueryConstraint
@@ -233,7 +235,7 @@ class NonrelQuery(object):
                 raise DatabaseError("This database doesn't support filtering "
                                     "on non-primary key ForeignKey fields.")
 
-            field = (f for f in opts.fields if f.column == column).next()
+            field = next(f for f in opts.fields if f.column == column)
             assert field.rel is not None
 
         value = self._normalize_lookup_value(
@@ -425,6 +427,7 @@ class NonrelCompiler(SQLCompiler):
 
         # Simulate a count().
         if aggregates:
+            aggregates = list(aggregates)
             assert len(aggregates) == 1
             aggregate = aggregates[0]
             if django.VERSION < (1, 8):
@@ -441,8 +444,14 @@ class NonrelCompiler(SQLCompiler):
                     raise DatabaseError("This database backend only supports "
                                         "count() queries on the primary key.")
             else:
+                try:
+                    from django.db.models.expressions import Star
+                    is_star = isinstance(aggregate.input_field, Star)  # Django 1.8.5+
+                except ImportError:
+                    is_star = aggregate.input_field.value == '*'
+
                 # Fair warning: the latter part of this or statement hasn't been tested
-                if aggregate.input_field.value != '*' and aggregate.input_field != (opts.db_table, opts.pk.column):
+                if not is_star and aggregate.input_field != (opts.db_table, opts.pk.column):
                     raise DatabaseError("This database backend only supports "
                                         "count() queries on the primary key.")
 
@@ -492,8 +501,8 @@ class NonrelCompiler(SQLCompiler):
         """
         if hasattr(self.query, 'is_empty') and self.query.is_empty():
             raise EmptyResultSet()
-        if (len([a for a in self.query.alias_map if self.query.alias_refcount[a]]) > 1
-                or self.query.distinct or self.query.extra or self.query.having):
+        if (len([a for a in self.query.alias_map if self.query.alias_refcount[a]]) > 1 or
+                self.query.distinct or self.query.extra or self.query.having):
             raise DatabaseError("This query is not supported by the database.")
 
     def get_count(self, check_exists=False):
