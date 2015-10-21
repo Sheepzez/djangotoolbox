@@ -4,12 +4,11 @@ import django
 from django.conf import settings
 from django.db import connections
 from django.db.models.fields import NOT_PROVIDED
+from django.db.models.query import QuerySet
 from django.db.models.sql.compiler import SQLCompiler
 from django.db.models.sql.constants import MULTI, SINGLE
-from django.db.utils import DatabaseError, IntegrityError
-
-from django.db.models.query import QuerySet
 from django.db.models.sql.where import AND, OR
+from django.db.utils import DatabaseError, IntegrityError
 from django.utils.tree import Node
 
 
@@ -423,11 +422,10 @@ class NonrelCompiler(SQLCompiler):
         """
         self.pre_sql_setup()
 
-        aggregates = self.query.aggregate_select.values()
+        aggregates = list(self.query.aggregate_select.values())
 
         # Simulate a count().
         if aggregates:
-            aggregates = list(aggregates)
             assert len(aggregates) == 1
             aggregate = aggregates[0]
             if django.VERSION < (1, 8):
@@ -556,9 +554,9 @@ class NonrelCompiler(SQLCompiler):
         only_load = self.deferred_to_columns()
         if only_load:
             db_table = self.query.model._meta.db_table
-            only_load = dict((k, v) for k, v in only_load.items()
+            only_load = dict((k, v) for k, v in list(only_load.items())
                              if v or k == db_table)
-            if len(only_load.keys()) > 1:
+            if len(list(only_load.keys())) > 1:
                 raise DatabaseError("Multi-table inheritance is not "
                                     "supported by non-relational DBs %s." %
                                     repr(only_load))

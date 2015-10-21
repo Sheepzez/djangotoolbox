@@ -1,9 +1,16 @@
-from django.utils.six.moves import cPickle as pickle
 import datetime
 
-from django.conf import settings
-
 import django
+from django.conf import settings
+from django.db.utils import DatabaseError
+from django.utils import six
+from django.utils import timezone
+from django.utils.functional import Promise
+
+from django.utils.six.moves import cPickle as pickle
+
+from .creation import NonrelDatabaseCreation
+
 
 if django.VERSION < (1, 8):
     from django.db.backends import (
@@ -21,9 +28,6 @@ else:
     from django.db.backends.base.introspection import BaseDatabaseIntrospection
     from django.db.backends.base.operations import BaseDatabaseOperations
 
-from django.db.utils import DatabaseError
-from django.utils import timezone
-from django.utils.functional import Promise
 
 if django.VERSION < (1, 5):
     from django.utils.encoding import (smart_unicode as smart_text,
@@ -38,8 +42,6 @@ if django.VERSION < (1, 5):
                                          EscapeUnicode as EscapeText)
 else:
     from django.utils.safestring import SafeBytes, SafeText, EscapeBytes, EscapeText
-
-from .creation import NonrelDatabaseCreation
 
 
 class NonrelDatabaseFeatures(BaseDatabaseFeatures):
@@ -459,7 +461,7 @@ class NonrelDatabaseOperations(BaseDatabaseOperations):
                 value = (
                     (key, self._value_for_db(subvalue, subfield,
                                              subkind, db_subtype, lookup))
-                    for key, subvalue in value.iteritems())
+                    for key, subvalue in six.iteritems(value))
 
                 # Return just a dict, a once-flattened list;
                 if db_type == 'dict':
@@ -514,9 +516,9 @@ class NonrelDatabaseOperations(BaseDatabaseOperations):
             # Generator yielding pairs with deconverted values, the
             # "list" db_type stores keys and values interleaved.
             if db_type == 'list':
-                value = zip(value[::2], value[1::2])
+                value = list(zip(value[::2], value[1::2]))
             else:
-                value = value.iteritems()
+                value = iter(six.iteritems(value))
 
             # DictField needs to hold a dict.
             return dict(
@@ -575,7 +577,7 @@ class NonrelDatabaseOperations(BaseDatabaseOperations):
         value = (
             (subfield.column, self._value_for_db(
                 subvalue, lookup=lookup, *self._convert_as(subfield, lookup)))
-            for subfield, subvalue in value.iteritems())
+            for subfield, subvalue in six.iteritems(value))
 
         # Cast to a dict, interleave columns with values on a list,
         # serialize, or return a generator.
@@ -603,7 +605,7 @@ class NonrelDatabaseOperations(BaseDatabaseOperations):
 
         # Separate keys from values and create a dict or unpickle one.
         if db_type == 'list':
-            value = dict(zip(value[::2], value[1::2]))
+            value = dict(list(zip(value[::2], value[1::2])))
         elif db_type == 'bytes' or db_type == 'string':
             value = pickle.loads(value)
 

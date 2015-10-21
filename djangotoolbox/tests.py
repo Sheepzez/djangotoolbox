@@ -1,5 +1,3 @@
-from __future__ import with_statement
-
 from decimal import Decimal, InvalidOperation
 import time
 from unittest import expectedFailure, skip
@@ -101,12 +99,12 @@ class IterableFieldsTest(TestCase):
     unordered_ints = [4, 2, 6, 1]
 
     def setUp(self):
-        for i, float in zip(range(1, 5), IterableFieldsTest.floats):
+        for i, float in zip(list(range(1, 5)), IterableFieldsTest.floats):
             ListModel(integer=i, floating_point=float,
                       names=IterableFieldsTest.names[:i]).save()
 
     def test_startswith(self):
-        self.assertEquals(
+        self.assertEqual(
             dict([(entity.pk, entity.names) for entity in
                   ListModel.objects.filter(names__startswith='Sa')]),
             dict([(3, ['Kakashi', 'Naruto', 'Sasuke']),
@@ -144,7 +142,7 @@ class IterableFieldsTest(TestCase):
         self.assertLessEqual(f.ordering.calls, len(self.unordered_ints))
 
     def test_gt(self):
-        self.assertEquals(
+        self.assertEqual(
             dict([(entity.pk, entity.names) for entity in
                   ListModel.objects.filter(names__gt='Kakashi')]),
             dict([(2, [u'Kakashi', u'Naruto']),
@@ -152,7 +150,7 @@ class IterableFieldsTest(TestCase):
                   (4, [u'Kakashi', u'Naruto', u'Sasuke', u'Sakura']), ]))
 
     def test_lt(self):
-        self.assertEquals(
+        self.assertEqual(
             dict([(entity.pk, entity.names) for entity in
                   ListModel.objects.filter(names__lt='Naruto')]),
             dict([(1, [u'Kakashi']),
@@ -161,14 +159,14 @@ class IterableFieldsTest(TestCase):
                   (4, [u'Kakashi', u'Naruto', u'Sasuke', u'Sakura']), ]))
 
     def test_gte(self):
-        self.assertEquals(
+        self.assertEqual(
             dict([(entity.pk, entity.names) for entity in
                   ListModel.objects.filter(names__gte='Sakura')]),
             dict([(3, [u'Kakashi', u'Naruto', u'Sasuke']),
                   (4, [u'Kakashi', u'Naruto', u'Sasuke', u'Sakura']), ]))
 
     def test_lte(self):
-        self.assertEquals(
+        self.assertEqual(
             dict([(entity.pk, entity.names) for entity in
                   ListModel.objects.filter(names__lte='Kakashi')]),
             dict([(1, [u'Kakashi']),
@@ -177,41 +175,41 @@ class IterableFieldsTest(TestCase):
                   (4, [u'Kakashi', u'Naruto', u'Sasuke', u'Sakura']), ]))
 
     def test_equals(self):
-        self.assertEquals([entity.names for entity in
-                           ListModel.objects.filter(names='Sakura')],
-                          [[u'Kakashi', u'Naruto', u'Sasuke', u'Sakura']])
+        self.assertEqual([entity.names for entity in
+                         ListModel.objects.filter(names='Sakura')],
+                         [[u'Kakashi', u'Naruto', u'Sasuke', u'Sakura']])
 
         # Test with additonal pk filter (for DBs that have special pk
         # queries).
         query = ListModel.objects.filter(names='Sakura')
-        self.assertEquals(query.get(pk=query[0].pk).names,
-                          [u'Kakashi', u'Naruto', u'Sasuke', u'Sakura'])
+        self.assertEqual(query.get(pk=query[0].pk).names,
+                         [u'Kakashi', u'Naruto', u'Sasuke', u'Sakura'])
 
     def test_is_null(self):
-        self.assertEquals(ListModel.objects.filter(
+        self.assertEqual(ListModel.objects.filter(
             names__isnull=True).count(), 0)
 
     def test_exclude(self):
-        self.assertEquals(
+        self.assertEqual(
             dict([(entity.pk, entity.names) for entity in
                   ListModel.objects.all().exclude(names__lt='Sakura')]),
             dict([(3, [u'Kakashi', u'Naruto', u'Sasuke']),
                   (4, [u'Kakashi', u'Naruto', u'Sasuke', u'Sakura']), ]))
 
     def test_chained_filter(self):
-        self.assertEquals(
+        self.assertEqual(
             [entity.names for entity in ListModel.objects
                 .filter(names='Sasuke').filter(names='Sakura')],
             [['Kakashi', 'Naruto', 'Sasuke', 'Sakura'], ])
 
-        self.assertEquals(
+        self.assertEqual(
             [entity.names for entity in ListModel.objects
                 .filter(names__startswith='Sa').filter(names='Sakura')],
             [['Kakashi', 'Naruto', 'Sasuke', 'Sakura']])
 
         # Test across multiple columns. On app engine only one filter
         # is allowed to be an inequality filter.
-        self.assertEquals(
+        self.assertEqual(
             [entity.names for entity in ListModel.objects
                 .filter(floating_point=9.1).filter(names__startswith='Sa')],
             [['Kakashi', 'Naruto', 'Sasuke'], ])
@@ -219,7 +217,7 @@ class IterableFieldsTest(TestCase):
     def test_setfield(self):
         setdata = [1, 2, 3, 2, 1]
         # At the same time test value conversion.
-        SetModel(setfield=map(str, setdata)).save()
+        SetModel(setfield=list(map(str, setdata))).save()
         item = SetModel.objects.filter(setfield=3)[0]
         self.assertEqual(item.setfield, set(setdata))
         # This shouldn't raise an error because the default value is
@@ -247,7 +245,7 @@ class IterableFieldsTest(TestCase):
 
     @skip("GAE specific?")
     def test_Q_objects(self):
-        self.assertEquals(
+        self.assertEqual(
             [entity.names for entity in ListModel.objects
                 .exclude(Q(names__lt='Sakura') | Q(names__gte='Sasuke'))],
             [['Kakashi', 'Naruto', 'Sasuke', 'Sakura']])
@@ -388,24 +386,24 @@ class EmbeddedModelFieldTest(TestCase):
                 ({'simple': 42}, EmbeddedModel),
                 ({'simple_untyped': 42}, models.Model),
                 ({'typed_list': [EmbeddedModel()]}, SetModel)):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 TypeError, "Expected instance of type %r." % expected,
                 EmbeddedModelFieldModel(**kwargs).save)
 
     def test_typed_listfield(self):
         EmbeddedModelFieldModel.objects.create(
-            typed_list=[SetModel(setfield=range(3)),
-                        SetModel(setfield=range(9))],
+            typed_list=[SetModel(setfield=list(range(3)),
+                        SetModel(setfield=list(range(9))],
             ordered_list=[Target(index=i) for i in six.moves.range(5, 0, -1)])
         obj = EmbeddedModelFieldModel.objects.get()
         self.assertIn(5, obj.typed_list[1].setfield)
         self.assertEqual([target.index for target in obj.ordered_list],
-                         range(1, 6))
+                         list(range(1, 6)))
 
     def test_untyped_listfield(self):
         EmbeddedModelFieldModel.objects.create(untyped_list=[
             EmbeddedModel(someint=7),
-            OrderedListModel(ordered_ints=range(5, 0, -1)),
+            OrderedListModel(ordered_ints=six.moves.range(5, 0, -1)),
             SetModel(setfield=[1, 2, 2, 3])])
         instances = EmbeddedModelFieldModel.objects.get().untyped_list
         for instance, cls in zip(instances,
@@ -416,7 +414,7 @@ class EmbeddedModelFieldTest(TestCase):
 
     def test_untyped_dict(self):
         EmbeddedModelFieldModel.objects.create(untyped_dict={
-            'a': SetModel(setfield=range(3)),
+            'a': SetModel(setfield=list(range(3))),
             'b': DictModel(dictfield={'a': 1, 'b': 2}),
             'c': DictModel(dictfield={}, auto_now={'y': 1})})
         data = EmbeddedModelFieldModel.objects.get().untyped_dict
@@ -718,14 +716,14 @@ class DecimalFieldTest(TestCase):
         d = DecimalModel.objects.get(decimal=Decimal('5.0'))
 
         self.assertTrue(isinstance(d.decimal, Decimal))
-        self.assertEquals(str(d.decimal), '5.00')
+        self.assertEqual(str(d.decimal), '5.00')
 
         d = DecimalModel.objects.get(decimal=Decimal('45.60'))
-        self.assertEquals(str(d.decimal), '45.60')
+        self.assertEqual(str(d.decimal), '45.60')
 
         # Filter argument should be converted to Decimal with 2 decimal places.
         d = DecimalModel.objects.get(decimal='0000345.67333333333333333')
-        self.assertEquals(str(d.decimal), '345.67')
+        self.assertEqual(str(d.decimal), '345.67')
 
     def test_order(self):
         """
@@ -734,7 +732,7 @@ class DecimalFieldTest(TestCase):
         """
         rows = DecimalModel.objects.all().order_by('decimal')
         values = list(d.decimal for d in rows)
-        self.assertEquals(values, sorted(values))
+        self.assertEqual(values, sorted(values))
 
     def test_sign_extend(self):
         DecimalModel(decimal=Decimal('-0.0')).save()
@@ -768,12 +766,12 @@ class BasicDeleteTest(TestCase):
     def test_delete_all(self):
         DeleteModel.objects.all().delete()
 
-        self.assertEquals(0, DeleteModel.objects.all().count())
+        self.assertEqual(0, DeleteModel.objects.all().count())
 
     def test_delete_filtered(self):
         DeleteModel.objects.filter(deletable=True).delete()
 
-        self.assertEquals(5, DeleteModel.objects.all().count())
+        self.assertEqual(5, DeleteModel.objects.all().count())
 
 
 class M2MDeleteChildModel(models.Model):
@@ -808,13 +806,13 @@ class ManyToManyDeleteTest(TestCase):
     def test_delete_all(self):
         M2MDeleteModel.objects.all().delete()
 
-        self.assertEquals(0, M2MDeleteModel.objects.all().count())
+        self.assertEqual(0, M2MDeleteModel.objects.all().count())
 
     @expectedFailure
     def test_delete_filtered(self):
         M2MDeleteModel.objects.filter(deletable=True).delete()
 
-        self.assertEquals(5, M2MDeleteModel.objects.all().count())
+        self.assertEqual(5, M2MDeleteModel.objects.all().count())
 
 
 class QuerysetModel(models.Model):

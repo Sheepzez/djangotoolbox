@@ -1,12 +1,12 @@
 # All fields except for BlobField written by Jonas Haag <jonas@lophus.org>
 
 from django.core.exceptions import ValidationError
-from django.utils.importlib import import_module
-from django.utils import six
 from django.db import models
+from django.db.models.fields.related import add_lazy_relation
 from django.db.models.fields.subclassing import Creator
 from django.db.utils import IntegrityError
-from django.db.models.fields.related import add_lazy_relation
+from django.utils import six
+from django.utils.importlib import import_module
 
 
 __all__ = ('RawField', 'ListField', 'SetField', 'DictField',
@@ -226,7 +226,7 @@ class DictField(AbstractIterableField):
 
     def _map(self, function, iterable, *args, **kwargs):
         return self._type((key, function(value, *args, **kwargs))
-                          for key, value in iterable.iteritems())
+                          for key, value in six.iteritems(iterable))
 
     def validate(self, values, model_instance):
         if not isinstance(values, dict):
@@ -234,6 +234,7 @@ class DictField(AbstractIterableField):
                                   type(values))
 
 
+@six.add_metaclass(models.SubfieldBase)
 class EmbeddedModelField(models.Field):
     """
     Field that allows you to embed a model instance.
@@ -246,7 +247,6 @@ class EmbeddedModelField(models.Field):
           the embedded instance (not just pre_save, get_db_prep_* and
           to_python).
     """
-    __metaclass__ = models.SubfieldBase
 
     def __init__(self, embedded_model=None, *args, **kwargs):
         self.embedded_model = embedded_model
