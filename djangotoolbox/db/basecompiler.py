@@ -422,7 +422,10 @@ class NonrelCompiler(SQLCompiler):
         """
         self.pre_sql_setup()
 
-        aggregates = list(self.query.aggregate_select.values())
+        if django.VERSION < (1, 8):
+            aggregates = list(self.query.aggregate_select.values())
+        else:
+            aggregates = list(self.query.annotation_select.values())
 
         # Simulate a count().
         if aggregates:
@@ -444,7 +447,11 @@ class NonrelCompiler(SQLCompiler):
             else:
                 try:
                     from django.db.models.expressions import Star
-                    is_star = isinstance(aggregate.input_field, Star)  # Django 1.8.5+
+
+                    try:
+                        is_star = isinstance(aggregate.input_field, Star)  # Django 1.8.5+
+                    except AttributeError:
+                        is_star = isinstance(aggregate.get_source_expressions()[0], Star)  # Django 1.9
                 except ImportError:
                     is_star = aggregate.input_field.value == '*'
 
@@ -500,7 +507,9 @@ class NonrelCompiler(SQLCompiler):
         if hasattr(self.query, 'is_empty') and self.query.is_empty():
             raise EmptyResultSet()
         if (len([a for a in self.query.alias_map if self.query.alias_refcount[a]]) > 1 or
-                self.query.distinct or self.query.extra or self.query.having):
+                self.query.distinct or self.query.extra or self.having):
+                # having is no longer part of the query as of 1.9; It moved to the compiler
+                # https://github.com/django/django/commit/afe0bb7b13bb8dc4370f32225238012c873b0ee3
             raise DatabaseError("This query is not supported by the database.")
 
     def get_count(self, check_exists=False):
