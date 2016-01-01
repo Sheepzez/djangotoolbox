@@ -178,7 +178,7 @@ class NonrelQuery(object):
         if filters.negated:
             self._negated = not self._negated
 
-    # ----------------------------------------------
+    # ----------------------------------------------s
     # Internal API for reuse by subclasses
     # ----------------------------------------------
 
@@ -510,7 +510,7 @@ class NonrelCompiler(SQLCompiler):
         if hasattr(self.query, 'is_empty') and self.query.is_empty():
             raise EmptyResultSet()
         if (len([a for a in self.query.alias_map if self.query.alias_refcount[a]]) > 1 or
-                self.query.distinct or self.query.extra or self.having):
+                self.query.distinct or self.query.extra):  # or self.having -- Not quite working.
                 # having is no longer part of the query as of 1.9; It moved to the compiler
                 # https://github.com/django/django/commit/afe0bb7b13bb8dc4370f32225238012c873b0ee3
             raise DatabaseError("This query is not supported by the database.")
