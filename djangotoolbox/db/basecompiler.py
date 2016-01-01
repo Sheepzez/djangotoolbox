@@ -488,6 +488,9 @@ class NonrelCompiler(SQLCompiler):
                 # This is the default behavior of ``query.convert_values``
                 # until django 1.8, where multiple converters are a thing.
                 value = self.connection.ops.convert_values(value, field)
+
+                if hasattr(field, "from_db_value"):
+                    value = field.from_db_value(value, None, self.connection, None)
             if value is None and not field.null:
                 raise IntegrityError("Non-nullable field %s can't be None!" %
                                      field.name)
